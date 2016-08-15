@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<head>
+    <link rel="stylesheet" type="text/css" href="canvas_draw.css">
+</head>
+<html>
+<body>
+<title>Canvas Drawing App</title>
+<h1>Draw with the HTML5 Canvas</h1>
+<table>
+<tr>
+    <td>
+        <div title="Change the color of the pencil by entering a valid HEX color. Try 00DDDD for teal." id="rectangle"></div>
+    </td>
+    <td>
+        <div title="Change the color of the pencil by entering a valid HEX color. Try 00DDDD for teal.">
+        HEX COLOR #<input type="text" id="active_color" value="000000">
+        </div>
+    </td>
+    <td>
+        <div id = "pencil_thickness_slider_div" title="Move the slider to change the thickness of the pencil tool.">Pencil thickness: <input type="range" id="pencil_thickness" min="2" max="100" value="15"></div>
+        <div id = "eraser_thickness_slider_div" title="Move the slider to change the thickness of the eraser tool.">Eraser thickness: <input type="range" id="eraser_thickness" min="2" max="100" value="15"></div>
+    </td>
+    <td>
+        <input type="button" id = "clear_button" value="CLEAR CANVAS" accesskey = "c" title="Click the button to erase everything on the canvas.">
+    </td>
+    <td>
+        <input type="button" id = "pencil_button" value="SWITCH TO PENCIL" accesskey = "p" title="Click the button to switch to the pencil tool.">
+    </td>
+    <td>
+        <input type="button" id = "eraser_button" value="SWITCH TO ERASER" accesskey = "e" title="Click the button to switch to the eraser tool.">
+    </td>
+    <td>
+        <a id = "save_button"><input type="button" value="SAVE FILE" accesskey = "s" title="Click the button to save your drawing."></a>
+    </td>
+    <td>
+       <input type="file" id="upload_button" name="imageLoader"  title="Click the button to upload a previous drawing or an image of your choice.">
+    </td>
+</tr>
+</table>
+<div id = "canvas_style">
+    <canvas id="myCanvas" style="border:1px solid #c3c3c3;">
+</div>
+</canvas>
+
+<script>
+
+var currentTool = "pencil";
+
+var Width = window.innerWidth-30;
+var Height = window.innerHeight-120;
+
+var color_box = document.getElementById("rectangle");
+
+var pencil_button = document.getElementById("pencil_button");
+pencil_button.addEventListener("click", changeCurrentToolToPencil, false);
+
+var eraser_button = document.getElementById("eraser_button");
+eraser_button.addEventListener("click", changeCurrentToolToEraser, false);
+
+var clear_button = document.getElementById("clear_button");
+clear_button.addEventListener("click", clearCanvas, false);
+
+var active_color_text_box = document.getElementById("active_color");
+var active_color = active_color_text_box.value;
+active_color_text_box.addEventListener("keyup", activeColorFormChange, false);
+
+var pencil_thickness_slider = document.getElementById("pencil_thickness");
+var pencil_thickness = pencil_thickness_slider.value;
+pencil_thickness_slider.addEventListener("change", updatePencilThickness, false);
+
+var eraser_thickness_slider = document.getElementById("eraser_thickness");
+var eraser_thickness = eraser_thickness_slider.value;
+eraser_thickness_slider.addEventListener("change", updateEraserThickness, false);
+
+
+document.getElementById('save_button').addEventListener('click', function() {
+    downloadCanvas(this);
+}, false);
+
+upload_button.addEventListener('change', handleImage, false);
+
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+var mousedownID = -1; 
+var c_x = 0;
+var c_y = 0;
+var l_x = 0;
+var l_y = 0;
+initialize_canvas();
+canvas.addEventListener("mousemove", mousemove, false);
+canvas.addEventListener("mousedown", mousedown, false);
+canvas.addEventListener("mouseup", mouseup, false);
+
+function clearCanvas(){
+    ctx.clearRect(0, 0, Width, Height);
+}
+
+function activeColorFormChange(){
+    var user_color = active_color_text_box.value;
+    var patt = new RegExp("^[a-fA-F0-9]{6}$");
+
+    var valid_hex = patt.test(user_color);
+    console.log("Color "+user_color+" Is valid color: "+valid_hex);
+    if(valid_hex){
+        changeStrokeColor("#"+user_color);
+        changeFillColor("#"+user_color);
+        changeColorBoxColor("#"+user_color);
+    }
+}
+
+function changeCurrentToolToPencil(){
+    document.getElementById('active_color').disabled = false;
+    document.getElementById("eraser_thickness_slider_div").style.visibility = "hidden";
+    document.getElementById("pencil_thickness_slider_div").style.visibility = "visible";
+    document.getElementById('pencil_button').disabled = true;
+    document.getElementById('eraser_button').disabled = false;
+
+    activeColorFormChange();
+    changeLineThickness(pencil_thickness, "a");    
+    ctx.globalCompositeOperation = "source-over";
+    currentTool = "pencil";
+}
+
+function changeCurrentToolToEraser(){
+    document.getElementById('active_color').disabled = true;
+    document.getElementById("pencil_thickness_slider_div").style.visibility = "hidden";
+    document.getElementById("eraser_thickness_slider_div").style.visibility = "visible";
+    document.getElementById('eraser_button').disabled = true;
+    document.getElementById('pencil_button').disabled = false;
+    changeLineThickness(eraser_thickness, "b");       
+    ctx.globalCompositeOperation = "destination-out";
+    currentTool = "eraser";
+}
+
+function updatePencilThickness(){
+    pencil_thickness = pencil_thickness_slider.value;
+    changeLineThickness(pencil_thickness);
+}
+
+function updateEraserThickness(){
+    eraser_thickness = eraser_thickness_slider.value;
+    changeLineThickness(eraser_thickness);
+}
+
+function changeColorBoxColor(hex_color){
+    color_box.style.background = hex_color;
+}
+function changeStrokeColor(hex_color){
+    ctx.strokeStyle=hex_color;
+}
+
+function changeFillColor(hex_color){
+    ctx.fillStyle=hex_color;
+}
+
+function changeLineThickness(line_thickness_val, code){
+    ctx.lineWidth = line_thickness_val;
+    if(code=="a")
+        pencil_thickness = line_thickness_val;
+    if(code=="b")
+        eraser_thickness = line_thickness_val;
+}
+
+function initialize_canvas(){
+    changeCurrentToolToPencil();
+	canvas.width  = Width;
+	canvas.height = Height;
+	ctx.fillStyle = active_color;
+    ctx.strokeStyle= active_color;
+    ctx.lineWidth = pencil_thickness;
+
+}
+
+function getCursorPosition(e) {
+    var x;
+    var y;
+    if (e.pageX || e.pageY) {
+	x = e.pageX;
+	y = e.pageY;
+    }
+    else {
+	x = e.clientX + document.body.scrollLeft +
+            document.documentElement.scrollLeft;
+	y = e.clientY + document.body.scrollTop +
+            document.documentElement.scrollTop;
+    }
+    x -= canvas.offsetLeft;
+    y -= canvas.offsetTop;
+    return [x,y]
+}
+
+function pointOnClick(e, thickness_val) {
+    ctx.beginPath();
+    ctx.arc(c_x, c_y, thickness_val*1/2 - 1, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.stroke();
+}
+
+function mousedown(e) {
+    updateLastLocation(e);
+  if(mousedownID==-1) 
+     mousedownID = setInterval(function(){mousedownAction(e)}, 1);
+
+}
+
+function mouseup(e) {
+   if(mousedownID!=-1) { 
+     clearInterval(mousedownID);
+     mousedownID=-1;
+   }
+}
+
+function mousemove(e){
+    var coord = getCursorPosition(e);
+   	c_x = coord[0];
+    c_y = coord[1];	
+}
+
+function updateLastLocation(e){
+    var coord = getCursorPosition(e);
+    l_x = coord[0];
+    l_y = coord[1];  
+}
+
+function pencil(e) {
+    ctx.strokeStyle = active_color;
+    changeLineThickness(pencil_thickness);   
+    ctx.beginPath();
+    ctx.moveTo(l_x, l_y);
+    ctx.lineTo(c_x, c_y);
+    ctx.stroke();
+    l_x = c_x;
+    l_y = c_y;
+    pointOnClick(e, pencil_thickness);    
+}
+
+function eraser(e) {
+
+    ctx.strokeStyle = "rgba(0,0,0,1)";
+    changeLineThickness(eraser_thickness);   
+    ctx.beginPath();
+    ctx.moveTo(l_x, l_y);
+    ctx.lineTo(c_x, c_y);
+    ctx.stroke();
+    l_x = c_x;
+    l_y = c_y;
+    pointOnClick(e, eraser_thickness);
+}
+
+function mousedownAction(e) {
+    if(currentTool=="pencil")
+        pencil(e);
+    if(currentTool=="eraser")
+        eraser(e);
+}
+
+function downloadCanvas(link) {
+    link.href = document.getElementById("myCanvas").toDataURL();
+    link.download = "canvas_drawing";
+}
+
+function handleImage(e){
+    var reader = new FileReader();
+    reader.onload = function(event){
+        var img = new Image();
+        img.src = event.target.result;
+
+        img.onload = function(){
+            ctx.globalCompositeOperation = "source-over";
+            ctx.drawImage(img,0,0);
+        }
+    }
+    reader.readAsDataURL(e.target.files[0]);     
+}
+
+</script>
+
+</body>
+</html>
+
