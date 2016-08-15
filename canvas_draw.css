@@ -1,0 +1,16 @@
+body {
+    background-color: lightblue;
+}
+h1 {
+    color: navy;
+    text-align: center;
+	font-size: 90%;
+}
+#rectangle{
+    width:30px;
+    height:30px;
+    background:black;
+}
+#canvas_style{
+    background:white;	
+}
